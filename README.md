@@ -367,7 +367,7 @@ clodex --version    # version
   this pre-dispatch intent, not proof of wire serialization. If the provider
   SDK reports that it omitted the tier for a model, clodex warns once and the
   backend default remains in use.
-- **Outbound proxy:** when `HTTP_PROXY`/`HTTPS_PROXY` (and optionally `NO_PROXY`) are set in clodex's environment, all clodex-originated network calls honor them — OAuth sign-in and token refresh, model-list and models.dev refreshes, upstream OpenAI API calls, and the ChatGPT/Codex OAuth WebSocket transport (tunneled via HTTP CONNECT).
+- **Outbound proxy:** when `HTTP_PROXY`/`HTTPS_PROXY` (and optionally `NO_PROXY`) are set in clodex's environment, all clodex-originated network calls honor them — OAuth sign-in and token refresh, model-list and models.dev refreshes, upstream OpenAI API calls, and the ChatGPT/Codex OAuth WebSocket transport (tunneled via HTTP CONNECT). In proxy mode this also covers the web traffic Claude Code itself makes through the clodex proxy, so web fetches and searches work behind a corporate proxy instead of failing on a blocked direct connection.
 - **Provider timeouts:** `CLODEX_UPSTREAM_IDLE_TIMEOUT_MS` controls how long an
   SDK-backed translated stream may produce no event (default `120000`; range
   `10000`–`3600000` ms). `CLODEX_UPSTREAM_TOTAL_TIMEOUT_MS` limits each call

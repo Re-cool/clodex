@@ -262,13 +262,30 @@ model-list and models.dev refresh, AI-SDK upstream calls) honors those variables
 otherwise it uses a direct `Agent`. Pinning fetch to HTTP/1.1 prevents Node 26's bundled undici 8
 from retaining a destroyed pooled HTTP/2 session and failing every later request to that origin.
 
-Transports that do not use the undici dispatcher share the same resolver: the `ws`-based OAuth
-Responses WebSocket gets an `https-proxy-agent` CONNECT tunnel via `outboundWsProxyAgent()`, and the
-raw first-party passthrough creates one keep-alive `outboundHttpProxyAgent()` synchronously after
-the local bridge binds and reuses it. If the resolved proxy URL names that same listener — by exact
-address, loopback alias, or a local interface behind a wildcard bind — raw passthrough warns and
-connects directly rather than recursively tunnelling through itself. Malformed proxy URLs also warn
-and fall back to direct connections.
+Three transports do not use the undici dispatcher and share the same resolver instead:
+
+- The `ws`-based OAuth Responses WebSocket gets an `https-proxy-agent` CONNECT tunnel via
+  `outboundWsProxyAgent()`.
+- The raw first-party Anthropic passthrough creates one keep-alive `outboundHttpProxyAgent()`
+  synchronously after the local bridge binds and reuses it.
+- Proxy mode's **pass-through CONNECT tunnels** — every `CONNECT` the MITM listener does not
+  intercept, which in proxy mode is all of the child's non-Anthropic web traffic, since the child's
+  `HTTPS_PROXY` points at that listener. `startHttpProxy` keeps a `Map` of
+  `outboundHttpProxyAgent()` instances keyed by resolved proxy URL and calls `agent.connect()` per
+  CONNECT (a fresh socket each time, so sharing is safe); the map is destroyed and cleared on close.
+  Without the agent the handler falls back to the direct `net.connect()` it always used.
+
+Each of the three resolves its proxy per target, so `NO_PROXY` still applies. Each also guards
+against naming the local listener — by exact address, loopback alias, or a local interface behind a
+wildcard bind — and connects directly rather than recursively tunnelling through itself. The
+passthrough agent checks once at bind time; the CONNECT handler must re-check per request and reads
+`proxyServer.address()` **inside the handler rather than caching it at startup**, because
+`listenTcpServer` resolves `listen()` and only then probes the port, so a CONNECT arriving during
+that probe would find an unset cache and disarm the guard. Its warning is emitted once per server.
+
+Malformed proxy URLs also warn and fall back to direct connections. All of these warnings go through
+`emitParentNotice`, not `console.error`: the CONNECT paths fire while the spawned Claude Code owns
+the terminal and `launchClaude` has muted the parent's stderr, so a bare write would never be seen.
 
 Claude Code's own `NO_PROXY` matcher has two behaviors worth knowing before changing this area:
 `no_proxy || NO_PROXY` means **lowercase wins outright — do not union the casings**, and `*` is
