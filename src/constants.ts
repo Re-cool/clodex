@@ -9,14 +9,14 @@ import type { ModelFormat } from './types.js';
 // connection-local previous_response_id continuation remains available.
 export const CODEX_RESPONSES_LITE_WS_URL = 'wss://chatgpt.com/backend-api/codex/responses';
 // `version` header the Codex backend expects on Responses-Lite requests. The
-// official Codex CLI sends its own version here, and the backend has been
-// observed to gate newly listed models on it: on 2026-09-23, with the header
-// at 0.153.3, gpt-6-luna and gpt-6-sol were refused with "The '<model>' model
-// is not supported when using Codex with a ChatGPT account" while gpt-6-astra
-// passed on the same account, and the same request with the header at
-// 0.155.0 or later was accepted. When a newly listed model fails with that
-// message AND the installed Codex CLI serves it on the same account, bump
-// this to that CLI's version (`codex --version`).
+// official Codex CLI sends its own version here, and the backend refuses a
+// model when this is below that model's `minimal_client_version` in the Codex
+// catalog (chatgpt.com/backend-api/codex/models). The refusal reads either
+// "The '<model>' model requires a newer version of Codex" or "The '<model>'
+// model is not supported when using Codex with a ChatGPT account" — the latter
+// is also the reply for a model the account cannot use. Keep this at or above
+// the highest `minimal_client_version` among `use_responses_lite` models:
+// gpt-6-sol and gpt-6-luna need 0.155.0 (measured 2026-09-22; 0.154.0 refused).
 export const CODEX_RESPONSES_LITE_VERSION = '0.156.0';
 // OpenAI-Beta opt-in for the WebSocket Responses transport.
 export const CODEX_RESPONSES_WEBSOCKETS_BETA = 'responses_websockets=2026-02-06';
